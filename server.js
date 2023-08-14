@@ -16,37 +16,42 @@ import http from 'http'
 import path from 'path'
 
 let server = http.createServer( (req, res) => {
-    serve_static(res, req.url, {verbose_error: true})
+    serve_static(res, req.url, {verbose_err: true})
 })
 
 server.listen(process.env.PORT || 3000)
 console.error(process.pid, process.cwd())
 
-function serve_static(res, file, opt = {}) {
-    if (/^\/+$/.test(file)) file = "index.html"
-    let name = path.join(opt.public_root || process.cwd(), path.normalize(file))
+function serve_static(writable, name, opt = {}) {
+    if (/^\/+$/.test(name)) name = "index.html"
+    let file = path.join(opt.public_root || process.cwd(), path.normalize(name))
 
-    fs.stat(name, (err, stats) => {
-        if (err || !stats.isFile()) return error(res, err)
+    fs.stat(file, (err, stats) => {
+        if (err || !stats.isFile()) return error(writable, err)
 
-        let readable = fs.createReadStream(name)
+        let headers_were_set
+        let readable = fs.createReadStream(file)
         readable.once('data', () => {
-            res.setHeader('Content-Length', stats.size)
-            res.setHeader('Content-Type', {
+            writable.setHeader('Content-Length', stats.size)
+            writable.setHeader('Content-Type', {
                 '.html': 'text/html',
                 '.js': 'application/javascript'
-            }[path.extname(name)] || 'application/octet-stream')
+            }[path.extname(file)] || 'application/octet-stream')
+            headers_were_set = true
         })
         readable.on('error', e => {
-            error(res, e, {code: 500, verbose_error: opt.verbose_error})
+            if (headers_were_set)
+                writable.end()
+            else
+                error(writable, e, {code: 500, verbose_err: opt.verbose_err})
         })
-        readable.pipe(res)
+        readable.pipe(writable)
     })
 }
 
-function error(res, msg, opt = {code: 404, verbose_error: false}) {
+function error(res, msg, opt = {code: 404, verbose_err: false}) {
     res.statusCode = opt.code
-    if (opt.verbose_error) {
+    if (opt.verbose_err) {
         console.error(msg.message)
         res.statusMessage = msg
     }
