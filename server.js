@@ -16,7 +16,10 @@ import http from 'http'
 import path from 'path'
 
 let server = http.createServer( (req, res) => {
-    serve_static(res, req.url, {verbose_err: true})
+    serve_static(res, req.url, {
+        mime: { '.txt': 'text/plain' },
+        verbose: true
+    })
 })
 
 server.listen(process.env.PORT || 3000)
@@ -27,33 +30,32 @@ function serve_static(writable, name, opt = {}) {
     let file = path.join(opt.public_root || process.cwd(), path.normalize(name))
 
     fs.stat(file, (err, stats) => {
-        if (err || !stats.isFile()) return error(writable, err)
+        if (!err && !stats.isFile()) {
+            err = new Error("Invalid argument")
+            err.code = 'EINVAL'
+        }
+        if (err) return error(writable, err, opt.verbose)
 
-        let headers_were_set
         let readable = fs.createReadStream(file)
         readable.once('data', () => {
             writable.setHeader('Content-Length', stats.size)
-            writable.setHeader('Content-Type', {
+            let mime = Object.assign({
                 '.html': 'text/html',
                 '.js': 'application/javascript'
-            }[path.extname(file)] || 'application/octet-stream')
-            headers_were_set = true
+            }, opt.mime)
+            writable.setHeader('Content-Type', mime[path.extname(file)]
+                               || 'application/octet-stream')
         })
-        readable.on('error', e => {
-            if (headers_were_set)
-                writable.end()
-            else
-                error(writable, e, {code: 500, verbose_err: opt.verbose_err})
-        })
+        readable.on('error', err => error(writable, err, opt.verbose))
         readable.pipe(writable)
     })
 }
 
-function error(res, msg, opt = {code: 404, verbose_err: false}) {
-    res.statusCode = opt.code
-    if (opt.verbose_err) {
-        console.error(msg.message)
-        res.statusMessage = msg
+function error(writable, err, verbose) {
+    if (!writable.headersSent) {
+        let codes = { 'ENOENT': 404, 'EACCES': 403, 'EINVAL': 400 }
+        writable.statusCode = codes[err?.code] || 500
+        if (verbose) writable.statusMessage = err
     }
-    res.end()
+    writable.end()
 }
