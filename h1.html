@@ -1,3 +1,13 @@
 <!doctype html>
 <h1>text/html</h1>
+
+<p><button>click me</button></p>
+
 <img alt="" src="État-230-800.jpg">
+
+<script type="module">
+  document.querySelector('button').onclick = async function() {
+      let html = await fetch('h1.html').then( v => v.text())
+      console.log(html.length)
+  }
+</script>
