@@ -39,12 +39,10 @@ function serve_static(writable, name, opt = {}) {
         let readable = fs.createReadStream(file)
         readable.once('data', () => {
             writable.setHeader('Content-Length', stats.size)
-            let mime = Object.assign({
+            writable.setHeader('Content-Type', Object.assign({
                 '.html': 'text/html',
                 '.js': 'application/javascript'
-            }, opt.mime)
-            writable.setHeader('Content-Type', mime[path.extname(file)]
-                               || 'application/octet-stream')
+            }, opt.mime)[path.extname(file)] || 'application/octet-stream')
         })
         readable.on('error', err => error(writable, err, opt.verbose))
         readable.pipe(writable)
