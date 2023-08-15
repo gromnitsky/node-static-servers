@@ -1,23 +1,18 @@
 /*
-  test:
-
-  $ seq 10000 | xargs -P 1000 -I@ curl -s http://127.0.0.1:3000/server.js -o /dev/null
-
-  It should not print:
-
-  - [DEP0137] DeprecationWarning: Closing a FileHandle object on
-    garbage collection is deprecated
-  - Warning: Closing file descriptor NN on garbage collection
-  - Premature close
+  + uses 'mime' from npm
+  - sets last-modified & etag
+  - responds to HEAD requests
 */
 
 import fs from 'fs'
 import http from 'http'
 import path from 'path'
+import mime from 'mime'
 
 let server = http.createServer( (req, res) => {
-    serve_static(res, req.url, {
-        mime: { '.txt': 'text/plain' },
+    serve_static2(res, req.url, {
+        headers: { 'access-control-allow-origin': 'example.com' },
+        mime: { 'text/markdown': ['txt'] },
         verbose: true
     })
 })
@@ -25,7 +20,7 @@ let server = http.createServer( (req, res) => {
 server.listen(process.env.PORT || 3000)
 console.error(process.pid, process.cwd())
 
-function serve_static(writable, name, opt = {}) {
+function serve_static2(writable, name, opt = {}) {
     if (/^\/+$/.test(name)) name = "index.html"
     let file = path.join(opt.public_root || process.cwd(), path.normalize(name))
 
@@ -39,10 +34,10 @@ function serve_static(writable, name, opt = {}) {
         let readable = fs.createReadStream(file)
         readable.once('data', () => {
             writable.setHeader('Content-Length', stats.size)
-            writable.setHeader('Content-Type', Object.assign({
-                '.html': 'text/html',
-                '.js': 'application/javascript'
-            }, opt.mime)[path.extname(file)] || 'application/octet-stream')
+            mime.define(opt.mime, true)
+            writable.setHeader('Content-Type',
+                               mime.getType(file) || 'application/octet-stream')
+            Object.entries(opt.headers || {}).map(h => writable.setHeader(...h))
         })
         readable.on('error', err => error(writable, err, opt.verbose))
         readable.pipe(writable)
