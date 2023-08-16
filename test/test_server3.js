@@ -23,14 +23,14 @@ suite('server3', function() {
     })
 
     test('accept_encoding_negotiate', function() {
-        assert.equal(server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('')), false)
+        assert.equal(server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('')), 'pass-through')
 
-        assert.equal(server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, deflate')), true)
+        assert.equal(server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, deflate')), 'compress')
 
-        assert.throws( () => server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, deflate;q=0')))
+        assert.equal(server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, deflate;q=0')), 'no deal')
 
-        assert.throws( () => server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, *;q=0')))
+        assert.equal(server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, *;q=0')), 'no deal')
 
-        assert.equal(server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, br')), false)
+        assert.equal(server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, br')), 'pass-through')
     })
 })
