@@ -27,11 +27,9 @@ suite('server3', function() {
 
         assert.equal(server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, deflate')), true)
 
-        let err = server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, deflate;q=0'))
-        assert(err instanceof Error)
+        assert.throws( () => server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, deflate;q=0')))
 
-        err = server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, *;q=0'))
-        assert(err instanceof Error)
+        assert.throws( () => server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, *;q=0')))
 
         assert.equal(server3.accept_encoding_negotiate('deflate', server3.accept_encoding_parse('gzip, br')), false)
     })
