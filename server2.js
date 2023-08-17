@@ -4,7 +4,7 @@ import serve_static from './lib/server2.js'
 
 let server = http.createServer( (req, res) => {
     serve_static(req, res, req.url, {
-        headers: { 'access-control-allow-origin': 'example.com' },
+        headers: { 'server': '2' },
         mime: { 'text/markdown': ['txt'] },
         verbose: true
     })

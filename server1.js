@@ -16,7 +16,7 @@ import serve_static from './lib/server1.js'
 
 let server = http.createServer( (req, res) => {
     serve_static(res, req.url, {
-        headers: { 'access-control-allow-origin': 'example.com' },
+        headers: { 'server': '1' },
         mime: { '.txt': 'text/plain' },
         verbose: true
     })
