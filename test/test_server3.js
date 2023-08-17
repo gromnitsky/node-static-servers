@@ -37,13 +37,27 @@ function curl(url, ...args) {
     let r = child_process.spawnSync('curl', ['-sfv', url, ...args],
                                     {encoding: 'utf-8'})
     let stderr = r.stderr.split("\r\n")
+    let server = stderr.filter( v => v[0] === '<')
+        .map( v => v.slice(2)).filter(Boolean)
     return {
         status: r.status,
         body: r.stdout,
         hdr: {
             client: stderr.filter( v => v[0] === '>')
                 .map( v => v.slice(2)).filter(Boolean),
-            server: stderr.filter( v => v[0] === '<').map( v => v.slice(2)),
+            server: {
+                status: server[0],
+                p: server.slice(1).map( v => {
+                    let sep = v.indexOf(':')
+                    return {
+                        name: v.slice(0, sep).toLowerCase(),
+                        val: v.slice(sep+2)
+                    }
+                }).reduce( (acc, cur) => {
+                    acc[cur.name] = cur.val
+                    return acc
+                }, {})
+            }
         }
     }
 }
@@ -66,17 +80,17 @@ suite('server3', function() {
 
     test('404', function() {
         let r = curl("http://127.0.0.1:3000")
-        assert.match(r.hdr.server[0],
+        assert.match(r.hdr.server.status,
                      /HTTP\/1.1 404 Error: ENOENT.+index.html/)
 
         r = curl("http://127.0.0.1:3000/../foo")
-        assert.match(r.hdr.server[0],
+        assert.match(r.hdr.server.status,
                      /HTTP\/1.1 404 Error: ENOENT.+[^.][^.]\/foo/)
     })
 
     test('directory', function() {
         let r = curl("http://127.0.0.1:3000/test")
-        assert.equal(r.hdr.server[0], 'HTTP/1.1 400 Error: Invalid argument')
+        assert.equal(r.hdr.server.status, 'HTTP/1.1 400 Error: Invalid argument')
     })
 
     test('no permissions', function() {
@@ -84,8 +98,32 @@ suite('server3', function() {
         fs.writeFileSync('noperm', 'delete me')
         fs.chmodSync('noperm', '0000')
         let r = curl("http://127.0.0.1:3000/noperm")
-        assert.match(r.hdr.server[0], /HTTP\/1.1 403/)
+        assert.match(r.hdr.server.status, /HTTP\/1.1 403/)
         fs.unlinkSync('noperm')
+    })
+
+    test('application/octet-stream do not ask to compress', function() {
+        let r = curl("http://127.0.0.1:3000/Makefile")
+        assert.equal(r.hdr.server.status, 'HTTP/1.1 200 OK')
+        let hdr = r.hdr.server.p
+        assert.equal(hdr['content-length'], '95')
+        assert.equal(hdr['content-type'], 'application/octet-stream')
+        assert(!/compressed/.test(hdr.etag))
+    })
+
+    test('application/octet-stream ask to compress', function() {
+        let r = curl("http://127.0.0.1:3000/Makefile", '--compressed')
+        let hdr = r.hdr.server.p
+        assert.equal(hdr['content-length'], '95')
+        assert.equal(hdr['content-type'], 'application/octet-stream')
+        assert(!/compressed/.test(hdr.etag))
+    })
+
+    test('application/json ask to compress', function() {
+        let r = curl("http://127.0.0.1:3000/package.json", '--compressed')
+        let hdr = r.hdr.server.p
+        assert.equal(hdr['content-length'], undefined)
+        assert(/compressed/.test(hdr.etag))
     })
 
 })
