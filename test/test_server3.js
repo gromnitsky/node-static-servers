@@ -126,4 +126,10 @@ suite('server3', function() {
         assert(/compressed/.test(hdr.etag))
     })
 
+    test('406', function() {
+        let r = curl("http://127.0.0.1:3000/package.json",
+                     '-H', 'Accept-Encoding: foo, *;q=0')
+        assert.equal(r.hdr.server.status, 'HTTP/1.1 406 Error: Pas acceptable')
+    })
+
 })
