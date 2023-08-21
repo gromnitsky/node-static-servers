@@ -4,10 +4,11 @@ import assert from 'assert'
 import fs from 'fs'
 import * as u from './u.js'
 
-let server_name = process.env.server || (
-    console.error("Usage: server=server4.js test/test_common3.js"),
+let server_ver = Number(process.env.server) || (
+    console.error("Usage: server=4 test/test_common.js"),
     process.exit(1)
 )
+let server_name = `server${server_ver}.js`
 
 suite(server_name, function() {
     suiteSetup(function(done) {
@@ -61,6 +62,8 @@ suite(server_name, function() {
     })
 
     test('application/json ask to compress', function() {
+        if (server_ver < 3) this.skip()
+
         let r = u.curl("http://127.0.0.1:3000/package.json", '--compressed')
         let hdr = r.hdr.server.p
         assert.equal(hdr['content-length'], undefined)
@@ -68,6 +71,8 @@ suite(server_name, function() {
     })
 
     test('406', function() {
+        if (server_ver < 3) this.skip()
+
         let r = u.curl("http://127.0.0.1:3000/package.json",
                      '-H', 'Accept-Encoding: foo, *;q=0')
         assert.equal(r.hdr.server.status, 'HTTP/1.1 406 Error: Pas acceptable')
