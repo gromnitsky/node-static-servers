@@ -95,7 +95,7 @@ suite(server_name, function() {
                        '-H', 'range: bytes=0-10')
         let hdr = r.hdr.server.p
         assert.equal(hdr['content-length'], '11')
-        assert.equal(hdr['content-range'], '0-10/50')
+        assert.equal(hdr['content-range'], 'bytes 0-10/50')
     })
 
     test('range: bytes=0-10, --compressed', function() {
@@ -105,7 +105,7 @@ suite(server_name, function() {
                        '-H', 'range: bytes=0-10', '--compressed')
         let hdr = r.hdr.server.p
         assert.equal(hdr['content-length'], 11)
-        assert.equal(hdr['content-range'], '0-10/50')
+        assert.equal(hdr['content-range'], 'bytes 0-10/50')
         assert.equal(r.body, '{"type":"mo')
     })
 
@@ -115,18 +115,18 @@ suite(server_name, function() {
         let r = u.curl("http://127.0.0.1:3000/package.json",
                        '-H', 'range: bytes=0-10,-1')
         let hdr = r.hdr.server.p
-        assert.equal(hdr['content-length'], 164)
+        assert.equal(hdr['content-length'], 176)
         assert.equal(hdr['content-range'], undefined)
         assert.equal(hdr['content-type'], `multipart/byteranges; boundary=12345`)
         assert.equal(r.body, `
 --12345
 Content-Type: application/json
-Content-Range: 0-10/50
+Content-Range: bytes 0-10/50
 
 {"type":"mo
 --12345
 Content-Type: application/json
-Content-Range: 49-49/50
+Content-Range: bytes 49-49/50
 
 }
 --12345--

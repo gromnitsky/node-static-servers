@@ -1,13 +1,9 @@
 <!doctype html>
+<meta charset="utf-8">
 <h1>text/html</h1>
 
-<p><button>click me</button></p>
+<p>
+  <audio controls src="ITC.SO-Episode66-2009.09.01.mp3"></audio>
+</p>
 
 <img alt="" src="État-230-800.jpg">
-
-<script type="module">
-  document.querySelector('button').onclick = async function() {
-      let html = await fetch('h1.html').then( v => v.text())
-      console.log(html.length)
-  }
-</script>
