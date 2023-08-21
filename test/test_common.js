@@ -33,7 +33,7 @@ suite(server_name, function() {
 
     test('directory', function() {
         let r = u.curl("http://127.0.0.1:3000/test")
-        assert.equal(r.hdr.server.status, 'HTTP/1.1 400 Error: Invalid argument')
+        assert.equal(r.hdr.server.status, 'HTTP/1.1 400 Error: Argument invalide')
     })
 
     test('no permissions', function() {
