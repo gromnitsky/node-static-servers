@@ -12,10 +12,12 @@ let server_name = `server${server_ver}.js`
 
 suite(server_name, function() {
     suiteSetup(function(done) {
+        process.env.DEBUG_BOUNDARY = '12345'
         this.kill = u.server_start(server_name, done)
     })
 
     suiteTeardown(function() {
+        delete process.env.DEBUG_BOUNDARY
         this.kill()
     })
 
@@ -78,4 +80,56 @@ suite(server_name, function() {
         assert.equal(r.hdr.server.status, 'HTTP/1.1 406 Error: Pas acceptable')
     })
 
+    test('416', function() {
+        if (server_ver < 4) this.skip()
+
+        let r = u.curl("http://127.0.0.1:3000/package.json",
+                       '-H', 'range: bytes=2-1')
+        assert.equal(r.hdr.server.status, 'HTTP/1.1 416 Error: Plage non satisfaisable')
+    })
+
+    test('range: bytes=0-10', function() {
+        if (server_ver < 4) this.skip()
+
+        let r = u.curl("http://127.0.0.1:3000/package.json",
+                       '-H', 'range: bytes=0-10')
+        let hdr = r.hdr.server.p
+        assert.equal(hdr['content-length'], '11')
+        assert.equal(hdr['content-range'], '0-10/50')
+    })
+
+    test('range: bytes=0-10, --compressed', function() {
+        if (server_ver < 4) this.skip()
+
+        let r = u.curl("http://127.0.0.1:3000/package.json",
+                       '-H', 'range: bytes=0-10', '--compressed')
+        let hdr = r.hdr.server.p
+        assert.equal(hdr['content-length'], 11)
+        assert.equal(hdr['content-range'], '0-10/50')
+        assert.equal(r.body, '{"type":"mo')
+    })
+
+    test('range: bytes=0-10,-1', function() {
+        if (server_ver < 4) this.skip()
+
+        let r = u.curl("http://127.0.0.1:3000/package.json",
+                       '-H', 'range: bytes=0-10,-1')
+        let hdr = r.hdr.server.p
+        assert.equal(hdr['content-length'], 164)
+        assert.equal(hdr['content-range'], undefined)
+        assert.equal(hdr['content-type'], `multipart/byteranges; boundary=12345`)
+        assert.equal(r.body, `
+--12345
+Content-Type: application/json
+Content-Range: 0-10/50
+
+{"type":"mo
+--12345
+Content-Type: application/json
+Content-Range: 49-49/50
+
+}
+--12345--
+`.replaceAll("\n", "\r\n"))
+    })
 })
