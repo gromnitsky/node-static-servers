@@ -63,6 +63,34 @@ suite(server_name, function() {
         assert(!/compressed/.test(hdr.etag))
     })
 
+    test('if-modified-since', function() {
+        if (server_ver < 2) this.skip()
+
+        let stats = fs.statSync('package.json')
+        let r = u.curl("http://127.0.0.1:3000/package.json", '-H',
+                       `if-modified-since: ${stats.mtime.toUTCString()}`)
+        assert.equal(r.hdr.server.status, 'HTTP/1.1 304 Not Modified')
+
+        let date = new Date(stats.mtime-1000)
+        r = u.curl("http://127.0.0.1:3000/package.json", '-H',
+                   `if-modified-since: ${date.toUTCString()}`)
+        assert.equal(r.hdr.server.status, 'HTTP/1.1 200 OK')
+    })
+
+    test('if-none-match', function() {
+        if (server_ver < 2) this.skip()
+        let etag = s => '"'+[s.dev, s.ino, s.mtime.getTime()].join("-")+'"'
+
+        let stats = fs.statSync('package.json')
+        let r = u.curl("http://127.0.0.1:3000/package.json", '-H',
+                       `if-none-match: ${etag(stats)}`)
+        assert.equal(r.hdr.server.status, 'HTTP/1.1 304 Not Modified')
+
+        r = u.curl("http://127.0.0.1:3000/package.json", '-H',
+                       `if-none-match: 1`)
+        assert.equal(r.hdr.server.status, 'HTTP/1.1 200 OK')
+    })
+
     test('application/json ask to compress', function() {
         if (server_ver < 3) this.skip()
 
@@ -132,4 +160,37 @@ Content-Range: bytes 49-49/50
 --12345--
 `.replaceAll("\n", "\r\n"))
     })
+
+    test('if-range date', function() {
+        if (server_ver < 4) this.skip()
+
+        let stats = fs.statSync('package.json')
+        let r = u.curl("http://127.0.0.1:3000/package.json",
+                       '-H', 'range: bytes=0-10',
+                       '-H', `if-range: ${stats.mtime.toUTCString()}`)
+        assert.equal('HTTP/1.1 206 Partial Content', r.hdr.server.status)
+
+        let date = new Date(stats.mtime-1000)
+        r = u.curl("http://127.0.0.1:3000/package.json", '-H',
+                       '-H', 'range: bytes=0-10',
+                       '-H', `if-range: ${date.toUTCString()}`)
+        assert.equal(r.hdr.server.status, 'HTTP/1.1 200 OK')
+    })
+
+    test('if-range etag', function() {
+        if (server_ver < 4) this.skip()
+        let etag = s => '"'+[s.dev, s.ino, s.mtime.getTime()].join("-")+'"'
+
+        let stats = fs.statSync('package.json')
+        let r = u.curl("http://127.0.0.1:3000/package.json",
+                       '-H', 'range: bytes=0-10',
+                       '-H', `if-range: ${etag(stats)}`)
+        assert.equal('HTTP/1.1 206 Partial Content', r.hdr.server.status)
+
+        r = u.curl("http://127.0.0.1:3000/package.json", '-H',
+                       '-H', 'range: bytes=0-10',
+                       '-H', `if-range: 1`)
+        assert.equal(r.hdr.server.status, 'HTTP/1.1 200 OK')
+    })
+
 })
