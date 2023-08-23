@@ -52,7 +52,7 @@ suite(server_name, function() {
         let hdr = r.hdr.server.p
         assert.equal(hdr['content-length'], '95')
         assert.equal(hdr['content-type'], 'application/octet-stream')
-        assert(!/compressed/.test(hdr.etag))
+        assert(!/deflate/.test(hdr.etag))
     })
 
     test('application/octet-stream ask to compress', function() {
@@ -60,7 +60,7 @@ suite(server_name, function() {
         let hdr = r.hdr.server.p
         assert.equal(hdr['content-length'], '95')
         assert.equal(hdr['content-type'], 'application/octet-stream')
-        assert(!/compressed/.test(hdr.etag))
+        assert(!/deflate/.test(hdr.etag))
     })
 
     test('if-modified-since', function() {
@@ -97,7 +97,7 @@ suite(server_name, function() {
         let r = u.curl("http://127.0.0.1:3000/package.json", '--compressed')
         let hdr = r.hdr.server.p
         assert.equal(hdr['content-length'], undefined)
-        assert(/compressed/.test(hdr.etag))
+        assert(/-deflate/.test(hdr.etag))
     })
 
     test('406', function() {
